@@ -1,26 +1,27 @@
-const experess = require("express");
+const express = require("express");
 const mongoose = require('mongoose');
 
 const indexRouter = require('./routes/index');
-const userRoute = require('./routes/user');
+const apiRoute = require('./routes/api');
+const bodyParser = require('body-parser')
 
-const app = experess();
+const app = express();
+
+app.use(bodyParser.json())
 
 app.use('/', indexRouter);
-app.use('/user', userRoute);
+app.use('/api', apiRoute);
 
-
-
-app.get('/',(req,res)=>{
-  res.send('<h1>Hello World</h1>');      //просто строки без res.end(), contentType
-});
+// app.get('/',(req,res)=>{
+//   res.send('<h1>Hello World</h1>');      //просто строки без res.end(), contentType
+// });
 
 async function start(PORT, UrlDB) {
   try {
     await mongoose.connect(UrlDB, {
       user: process.env.DB_USERNAME || 'root',
       pass: process.env.DB_USERNAME || 'example',
-      dbName: process.env.DB_NAME || 'book_database',
+      dbName: process.env.DB_NAME || 'delivery_database',
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
