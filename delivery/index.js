@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 
 const indexRouter = require('./routes/index');
 const apiRoute = require('./routes/api');
+
 const bodyParser = require('body-parser')
 
 const app = express();
@@ -11,10 +12,6 @@ app.use(bodyParser.json())
 
 app.use('/', indexRouter);
 app.use('/api', apiRoute);
-
-// app.get('/',(req,res)=>{
-//   res.send('<h1>Hello World</h1>');      //просто строки без res.end(), contentType
-// });
 
 async function start(PORT, UrlDB) {
   try {
