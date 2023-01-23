@@ -6,20 +6,78 @@ const fileMulter = require('../middleware/advertisementfile')
 const UserModule = require('../models/user');
 const Advertisement = require('../models/аdvertisement');
 
-router.post('/signup', async (req, res) => {
+//auth
+const bcrypt = require('bcrypt');
+const passport = require('passport')
+const LocalStrategy = require('passport-local').Strategy
+
+verifyPassword = (user, password) => {
+  return bcrypt.compareSync(password, user.password);
+};
+
+const verify = (email, password, done) => {
+  UserModule.findOne({email}, (err, user) => {
+    if (err) {
+      return done(err)
+    }
+    if (!user) {
+      return done(null, false)
+    }
+
+    if (!verifyPassword(user, password)) {
+      return done(null, false)
+    }
+
+    return done(null, user)
+  })
+};
+
+const options = {
+  usernameField: "username",
+  passwordField: "password",
+};
+
+passport.use('local', new LocalStrategy(options, verify))
+
+passport.serializeUser((user, cb) => {
+  cb(null, user.id)
+});
+
+passport.deserializeUser((id, cb) => {
+  UserModule.findById(id, (err, user) => {
+    if (err) {
+      return cb(err)
+    }
+    cb(null, user)
+  })
+});
+
+
+router.post('/signup', async (req, res, next) => {
   try {
     console.log('try')
     const { email, name, password, contactPhone } = req.body;
-    const user = await UserModule.create({ email, name, passwordHash: password, contactPhone });
-    res.status(200).json({
-      data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
-      status: 'ok'
+    const hash = await bcrypt.hash(password, 10);
+    const user = await UserModule.create({ email, name, passwordHash: hash, contactPhone });
+    req.login(user, function (err) {
+      if (err) {
+        return next(err);
+      }
+      res.status(200).json({
+        data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
+        status: 'ok'
+      });
     });
   } catch (e) {
     res.status(500).json({ error: "email занят", status: 'error' });
   }
 })
 
+router.post('/signin',
+  passport.authenticate('local', {failureRedirect: '/api/signin'}),
+  async (req, res) => {
+    res.redirect('/api/user')
+  });
 
 router.get('/advertisements', async (req, res) => {
   try {
