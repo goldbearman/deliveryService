@@ -12,11 +12,14 @@ const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 
 verifyPassword = (user, password) => {
+  console.log('verifyPassword ');
   return bcrypt.compareSync(password, user.password);
 };
 
-const verify = (email, password, done) => {
-  UserModule.findOne({email}, (err, user) => {
+const verify = (username, password, done) => {
+  console.log('verify');
+  UserModule.findOne({username}, (err, user) => {
+    console.log(user);
     if (err) {
       return done(err)
     }
@@ -33,17 +36,19 @@ const verify = (email, password, done) => {
 };
 
 const options = {
-  usernameField: "username",
+  emailField: "email",
   passwordField: "password",
 };
 
 passport.use('local', new LocalStrategy(options, verify))
 
 passport.serializeUser((user, cb) => {
+  console.log('serializeUser');
   cb(null, user.id)
 });
 
 passport.deserializeUser((id, cb) => {
+  console.log('deserializeUser');
   UserModule.findById(id, (err, user) => {
     if (err) {
       return cb(err)
@@ -55,11 +60,11 @@ passport.deserializeUser((id, cb) => {
 
 router.post('/signup', async (req, res, next) => {
   try {
-    console.log('try')
     const { email, name, password, contactPhone } = req.body;
     const hash = await bcrypt.hash(password, 10);
     const user = await UserModule.create({ email, name, passwordHash: hash, contactPhone });
     req.login(user, function (err) {
+      console.log('req.login');
       if (err) {
         return next(err);
       }
@@ -76,7 +81,7 @@ router.post('/signup', async (req, res, next) => {
 router.post('/signin',
   passport.authenticate('local', {failureRedirect: '/api/signin'}),
   async (req, res) => {
-    res.redirect('/api/user')
+    res.status(500).json({ error: "email занят", status: 'error' });
   });
 
 router.get('/advertisements', async (req, res) => {

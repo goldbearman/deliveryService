@@ -1,6 +1,10 @@
 const express = require("express");
 const mongoose = require('mongoose');
 
+//pasport.js
+const session = require('express-session')
+const passport = require('passport')
+
 const indexRouter = require('./routes/index');
 const apiRoute = require('./routes/api');
 
@@ -9,6 +13,14 @@ const bodyParser = require('body-parser')
 const app = express();
 
 app.use(bodyParser.json())
+//pasport.js
+app.use(session({
+  secret: 'SECRET',
+  resave: true,
+  saveUninitialized: true,
+}));
+app.use(passport.initialize())
+app.use(passport.session())
 
 app.use('/', indexRouter);
 app.use('/api', apiRoute);
