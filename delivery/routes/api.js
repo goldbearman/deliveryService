@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 
+const bcrypt = require('bcrypt');
 const fileMulter = require('../middleware/advertisementfile')
 
 const UserModule = require('../models/user');
 const Advertisement = require('../models/аdvertisement');
 
 //auth
-const bcrypt = require('bcrypt');
 const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 
@@ -16,9 +16,9 @@ verifyPassword = (user, password) => {
   return bcrypt.compareSync(password, user.password);
 };
 
-const verify = (username, password, done) => {
+const verify = (email, password, done) => {
   console.log('verify');
-  UserModule.findOne({username}, (err, user) => {
+  UserModule.findOne({email}, (err, user) => {
     console.log(user);
     if (err) {
       return done(err)
@@ -36,7 +36,7 @@ const verify = (username, password, done) => {
 };
 
 const options = {
-  emailField: "email",
+  usernameField: "email",
   passwordField: "password",
 };
 
@@ -62,7 +62,7 @@ router.post('/signup', async (req, res, next) => {
   try {
     const { email, name, password, contactPhone } = req.body;
     const hash = await bcrypt.hash(password, 10);
-    const user = await UserModule.create({ email, name, passwordHash: hash, contactPhone });
+    const user = await UserModule.create({ email, name, password: hash, contactPhone });
     req.login(user, function (err) {
       console.log('req.login');
       if (err) {
@@ -78,11 +78,30 @@ router.post('/signup', async (req, res, next) => {
   }
 })
 
-router.post('/signin',
-  passport.authenticate('local', {failureRedirect: '/api/signin'}),
-  async (req, res) => {
-    res.status(500).json({ error: "email занят", status: 'error' });
-  });
+// router.post('/signin',
+//   passport.authenticate('local', {failureRedirect: '/api/signin'}),
+//   async (req, res) => {
+//     res.status(500).json({ error: "email занят", status: 'error' });
+//   });
+
+router.post('/signin', function(req, res, next) {
+  passport.authenticate('local', function(err, user, info) {
+    if (err) {
+      return next(err); // will generate a 500 error
+    }
+    // Generate a JSON response reflecting authentication status
+    if (! user) {
+      return res.send({ success : false, message : 'authentication failed' });
+    }
+    req.login(user, loginErr => {
+      if (loginErr) {
+        return next(loginErr);
+      }
+      return res.send(req.user);
+    });
+  })(req, res, next);
+});
+
 
 router.get('/advertisements', async (req, res) => {
   try {
