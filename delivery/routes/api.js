@@ -78,26 +78,23 @@ router.post('/signup', async (req, res, next) => {
   }
 })
 
-// router.post('/signin',
-//   passport.authenticate('local', {failureRedirect: '/api/signin'}),
-//   async (req, res) => {
-//     res.status(500).json({ error: "email занят", status: 'error' });
-//   });
-
 router.post('/signin', function(req, res, next) {
   passport.authenticate('local', function(err, user, info) {
     if (err) {
       return next(err); // will generate a 500 error
     }
-    // Generate a JSON response reflecting authentication status
+    console.log(err);
     if (! user) {
-      return res.send({ success : false, message : 'authentication failed' });
+      return res.send({ error: "Неверный логин или пароль", status: "error" });
     }
     req.login(user, loginErr => {
       if (loginErr) {
         return next(loginErr);
       }
-      return res.send(req.user);
+      return res.status(200).json({
+        data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
+        status: 'ok'
+      });
     });
   })(req, res, next);
 });
@@ -139,7 +136,16 @@ router.post('/advertisements',
         // }
         // const newEl = JSON.stringify(el);
         // console.log(newEl);
-
+        req.login(user, function (err) {
+          console.log('req.login');
+          if (err) {
+            return next(err);
+          }
+          res.status(200).json({
+            data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
+            status: 'ok'
+          });
+        });
 
         const newAdvertisement = await JSON.parse(req.body.advertisementFile);
         await console.log( newAdvertisement);
