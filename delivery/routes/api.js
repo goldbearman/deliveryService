@@ -18,7 +18,7 @@ verifyPassword = (user, password) => {
 
 const verify = (email, password, done) => {
   console.log('verify');
-  UserModule.findOne({email}, (err, user) => {
+  UserModule.findOne({ email }, (err, user) => {
     console.log(user);
     if (err) {
       return done(err)
@@ -78,13 +78,13 @@ router.post('/signup', async (req, res, next) => {
   }
 })
 
-router.post('/signin', function(req, res, next) {
-  passport.authenticate('local', function(err, user, info) {
+router.post('/signin', function (req, res, next) {
+  passport.authenticate('local', function (err, user, info) {
     if (err) {
       return next(err); // will generate a 500 error
     }
     console.log(err);
-    if (! user) {
+    if (!user) {
       return res.send({ error: "Неверный логин или пароль", status: "error" });
     }
     req.login(user, loginErr => {
@@ -129,42 +129,25 @@ router.post('/advertisements',
     console.log(req.body);
     if (req.body.advertisementFile) {
       try {
-        // const el = {
-        //   shortTitle: "Темные алеи",
-        //   description: "alei",
-        //   images: ["/uploads/507f1f77bcf86cd799439011/slon_v_profil.jpg", "/uploads/507f1f77bcf86cd799439011/slon_v_fas.jpg", "/uploads/507f1f77bcf86cd799439011/slon_hobot.jpg"]
-        // }
-        // const newEl = JSON.stringify(el);
-        // console.log(newEl);
-        req.login(user, function (err) {
+
+        if (req.user) {
+          const user = req.user;
           console.log('req.login');
-          if (err) {
-            return next(err);
-          }
+
+          const newAdvertisement = await JSON.parse(req.body.advertisementFile);
+          await console.log(newAdvertisement);
+          await console.log('22   ' + newAdvertisement.shortTitle);
+          const advertisement = await Advertisement.create({ ...newAdvertisement, userId: user.id });
+          await console.log('3   ' + advertisement);
+
           res.status(200).json({
-            data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
+            data: [{ ...advertisement, user: { id: user._id, name: user.name } }],
             status: 'ok'
           });
-        });
+        } else {
+          return res.status(401).json({ error: "you need signin", status: 'error' });
+        }
 
-        const newAdvertisement = await JSON.parse(req.body.advertisementFile);
-        await console.log( newAdvertisement);
-        await console.log('22   '+ newAdvertisement.shortTitle);
-        const advertisement = await Advertisement.create({ ...newAdvertisement });
-        await console.log('3   '+advertisement);
-
-
-        // newBook.fileBook = path;
-        // newBook.id = uuid();
-        // if (!keyComparison(new Book(), newBook)) {         //Проверка наличия всех полей
-        //   res.json('Не хватает данных в книге!');
-        // } else {
-        //   const isNewBook = stor.books.every(el => el.title !== newBook.title && el.authors !== newBook.authors);
-        //   if (isNewBook) {                                  //Проверка дублирующей книги
-        //     stor.books.push(newBook);
-        //     res.json({ path })
-        //   } else res.json('Данная книга уже есть!');
-        // }
       } catch (e) {
         console.log(e);
         res.json('1 Неверная структура данных!');
@@ -173,6 +156,23 @@ router.post('/advertisements',
 
     res.json()
   });
+
+router.post('/advertisements/:id', async (req, res) => {
+  const { id } = req.params;
+  if (req.user) {
+    try {
+      await Advertisement.deleteOne({ _id: id })
+      res.status(200).json({
+        data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
+        status: 'ok'
+      });
+    } catch (e) {
+      res.status(403).json({ error: "you are not an author", status: 'error' });
+    }
+  } else {
+    return res.status(401).json({ error: "you need signin", status: 'error' });
+  }
+});
 
 
 module.exports = router;
