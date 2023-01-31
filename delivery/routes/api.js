@@ -126,6 +126,7 @@ router.post('/advertisements',
   async (req, res) => {
     // console.log(req.file);
     // const { path } = req.file
+    console.log('req.body');
     console.log(req.body);
     if (req.body.advertisementFile) {
       try {
@@ -135,13 +136,17 @@ router.post('/advertisements',
           console.log('req.login');
 
           const newAdvertisement = await JSON.parse(req.body.advertisementFile);
-          await console.log(newAdvertisement);
+          console.log(newAdvertisement);
           await console.log('22   ' + newAdvertisement.shortTitle);
-          const advertisement = await Advertisement.create({ ...newAdvertisement, userId: user.id });
-          await console.log('3   ' + advertisement);
+          const { shortTitle, description, images, createdAt, _id } = await Advertisement.create({
+            ...newAdvertisement,
+            userId: user.id
+          });
+          await console.log('3   ' + shortTitle);
+          await console.log('3   ' + _id);
 
           res.status(200).json({
-            data: [{ ...advertisement, user: { id: user._id, name: user.name } }],
+            data: [{ id: _id, shortTitle, description, images, user: { id: user._id, name: user.name }, createdAt }],
             status: 'ok'
           });
         } else {
@@ -157,17 +162,24 @@ router.post('/advertisements',
     res.json()
   });
 
-router.post('/advertisements/:id', async (req, res) => {
+router.delete('/advertisements/:id', async (req, res) => {
   const { id } = req.params;
   if (req.user) {
-    try {
-      await Advertisement.deleteOne({ _id: id })
-      res.status(200).json({
-        data: { id: user._id, email: user.email, name: user.name, contactPhone: user.contactPhone },
-        status: 'ok'
-      });
-    } catch (e) {
-      res.status(403).json({ error: "you are not an author", status: 'error' });
+    console.log(req.user.id);
+    const advertisement = await Advertisement.findById(id);
+    console.log(advertisement.userId.toString());
+    if (req.user.id === advertisement.userId.toString()) {
+      try {
+        await Advertisement.updateOne({ _id: id }, { isDeleted: true });
+        res.status(200).json({
+          data: 'advertisement delete',
+          status: 'ok'
+        });
+      } catch (e) {
+        res.status(400).json({ error: "invalid id", status: 'error' });
+      }
+    } else {
+      return res.status(403).json({ error: "it is not your advertisement", status: 'error' });
     }
   } else {
     return res.status(401).json({ error: "you need signin", status: 'error' });
