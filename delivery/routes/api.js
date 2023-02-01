@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 
 const bcrypt = require('bcrypt');
 const fileMulter = require('../middleware/advertisementfile')
@@ -12,14 +13,11 @@ const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 
 verifyPassword = (user, password) => {
-  console.log('verifyPassword ');
   return bcrypt.compareSync(password, user.password);
 };
 
 const verify = (email, password, done) => {
-  console.log('verify');
   UserModule.findOne({ email }, (err, user) => {
-    console.log(user);
     if (err) {
       return done(err)
     }
@@ -43,12 +41,10 @@ const options = {
 passport.use('local', new LocalStrategy(options, verify))
 
 passport.serializeUser((user, cb) => {
-  console.log('serializeUser');
   cb(null, user.id)
 });
 
 passport.deserializeUser((id, cb) => {
-  console.log('deserializeUser');
   UserModule.findById(id, (err, user) => {
     if (err) {
       return cb(err)
@@ -57,14 +53,12 @@ passport.deserializeUser((id, cb) => {
   })
 });
 
-
 router.post('/signup', async (req, res, next) => {
   try {
     const { email, name, password, contactPhone } = req.body;
     const hash = await bcrypt.hash(password, 10);
     const user = await UserModule.create({ email, name, password: hash, contactPhone });
     req.login(user, function (err) {
-      console.log('req.login');
       if (err) {
         return next(err);
       }
@@ -83,7 +77,6 @@ router.post('/signin', function (req, res, next) {
     if (err) {
       return next(err); // will generate a 500 error
     }
-    console.log(err);
     if (!user) {
       return res.send({ error: "Неверный логин или пароль", status: "error" });
     }
@@ -102,7 +95,6 @@ router.post('/signin', function (req, res, next) {
 
 router.get('/advertisements', async (req, res) => {
   try {
-    console.log('/advertisements')
     const advertisements = await Advertisement.find().select('-__v');
     res.json(advertisements);
   } catch (e) {
@@ -113,7 +105,6 @@ router.get('/advertisements', async (req, res) => {
 router.get('/advertisements/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    console.log('/advertisements/:id')
     const advertisement = await Advertisement.findById(id).select('-__v');
     res.json(advertisement);
   } catch (e) {
@@ -124,27 +115,15 @@ router.get('/advertisements/:id', async (req, res) => {
 router.post('/advertisements',
   fileMulter.single('advertisementFile'),    //(ожидаемое имя файла)
   async (req, res) => {
-    // console.log(req.file);
-    // const { path } = req.file
-    console.log('req.body');
-    console.log(req.body);
     if (req.body.advertisementFile) {
       try {
-
         if (req.user) {
           const user = req.user;
-          console.log('req.login');
-
           const newAdvertisement = await JSON.parse(req.body.advertisementFile);
-          console.log(newAdvertisement);
-          await console.log('22   ' + newAdvertisement.shortTitle);
           const { shortTitle, description, images, createdAt, _id } = await Advertisement.create({
             ...newAdvertisement,
             userId: user.id
           });
-          await console.log('3   ' + shortTitle);
-          await console.log('3   ' + _id);
-
           res.status(200).json({
             data: [{ id: _id, shortTitle, description, images, user: { id: user._id, name: user.name }, createdAt }],
             status: 'ok'
@@ -152,22 +131,17 @@ router.post('/advertisements',
         } else {
           return res.status(401).json({ error: "you need signin", status: 'error' });
         }
-
       } catch (e) {
-        console.log(e);
-        res.json('1 Неверная структура данных!');
+        res.json('Неверная структура данных!');
       }
-    } else res.json('2 Неверная структура данных!');
-
+    } else res.json('Неверная структура данных!');
     res.json()
   });
 
 router.delete('/advertisements/:id', async (req, res) => {
   const { id } = req.params;
   if (req.user) {
-    console.log(req.user.id);
     const advertisement = await Advertisement.findById(id);
-    console.log(advertisement.userId.toString());
     if (req.user.id === advertisement.userId.toString()) {
       try {
         await Advertisement.updateOne({ _id: id }, { isDeleted: true });
@@ -186,5 +160,28 @@ router.delete('/advertisements/:id', async (req, res) => {
   }
 });
 
+router.post('/advertisements/search', async (req, res) => {
+  const { shortText, description, userId, tags } = req.body;
+  console.log(shortText, description, userId, tags)
+  console.log(typeof userId);
+  const userIdNum = +userId.trim();
+  console.log(userIdNum);
+  const id = mongoose.Types.ObjectId(userIdNum);
+  console.log(id);
+  try {
+    const advertisements = await Advertisement.find({
+      $or: [{ shortText: `/${shortText}/i` },
+        { description: `/${description}/i` },
+        { userId:id },
+        { tags }]
+    });
+    //todo Дописать правильные выводные данные
+    const noDeletedAds = await advertisements.filter(el => !el.isDeleted);
+    res.status(200).json({ noDeletedAds });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ error: "invalid data", status: 'error' });
+  }
+})
 
 module.exports = router;

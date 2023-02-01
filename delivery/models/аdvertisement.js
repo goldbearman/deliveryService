@@ -4,18 +4,22 @@ const advertisementSchema = new Schema({
   shortTitle: {
     type:String,
     required:true,
-    trim:true
+    trim:true,
+    minLength: [2, 'Запрос не может быть слишком коротким']
   },
   description: {
     type:String,
     trim:true,
+    minLength: [2, 'Запрос не может быть слишком коротким']
   },
   images:  {
     type:[{type:String}],
   },
   userId: {
     type:Schema.Types.ObjectId,
-    required:true
+    required:true,
+    trim:true,
+    minLength:2
   },
   createdAt: {
     type:Date,
@@ -29,6 +33,7 @@ const advertisementSchema = new Schema({
   },
   tags: {
     type:[{type:String}],
+    minLength:2
   },
   isDeleted: {
     type:Boolean,
