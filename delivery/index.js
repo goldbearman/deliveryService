@@ -7,10 +7,17 @@ const passport = require('passport')
 
 const indexRouter = require('./routes/index');
 const apiRoute = require('./routes/api');
+const errorMiddleware = require('./middleware/error');
 
 const bodyParser = require('body-parser')
 
+//Chart
+const http = require('http');
+const socketIO = require('socket.io');
+
 const app = express();
+const server = http.Server(app);
+const io = socketIO(server);
 
 app.use(bodyParser.json())
 //pasport.js
@@ -24,6 +31,28 @@ app.use(passport.session())
 
 app.use('/', indexRouter);
 app.use('/api', apiRoute);
+app.use(errorMiddleware);
+
+io.on('connection', (socket) => {
+  const {id} = socket;
+  console.log(`Socket connected: ${id}`);
+
+  // работа с комнатами
+  const {roomName} = socket.handshake.query;
+  console.log(`Socket roomName: ${roomName}`);
+  //подписываемся на событие комнаты
+  socket.join(roomName);
+  socket.on('message-to-room', (msg) => {
+    console.log('on '+msg)
+    msg.type = `room: ${roomName}`;
+    socket.to(roomName).emit('message-to-room', msg);
+    socket.emit('message-to-room', msg);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`Socket disconnected: ${id}`);
+  });
+});
 
 async function start(PORT, UrlDB) {
   try {
@@ -34,7 +63,7 @@ async function start(PORT, UrlDB) {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    app.listen(PORT);
+    server.listen(PORT);
   } catch (e) {
     console.log(e);
   }
