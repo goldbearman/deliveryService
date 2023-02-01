@@ -73,7 +73,7 @@ router.post('/signup', async (req, res, next) => {
 })
 
 router.post('/signin', function (req, res, next) {
-  passport.authenticate('local', function (err, user, info) {
+  passport.authenticate('local', function (err, user) {
     if (err) {
       return next(err); // will generate a 500 error
     }
@@ -162,12 +162,8 @@ router.delete('/advertisements/:id', async (req, res) => {
 
 router.post('/advertisements/search', async (req, res) => {
   const { shortText, description, userId, tags } = req.body;
-  console.log(shortText, description, userId, tags)
-  console.log(typeof userId);
   const userIdNum = +userId.trim();
-  console.log(userIdNum);
   const id = mongoose.Types.ObjectId(userIdNum);
-  console.log(id);
   try {
     const advertisements = await Advertisement.find({
       $or: [{ shortText: `/${shortText}/i` },
@@ -175,11 +171,9 @@ router.post('/advertisements/search', async (req, res) => {
         { userId:id },
         { tags }]
     });
-    //todo Дописать правильные выводные данные
     const noDeletedAds = await advertisements.filter(el => !el.isDeleted);
     res.status(200).json({ noDeletedAds });
   } catch (e) {
-    console.log(e);
     res.status(400).json({ error: "invalid data", status: 'error' });
   }
 })
