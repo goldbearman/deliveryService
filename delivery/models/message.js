@@ -19,7 +19,6 @@ const messageSchema = new Schema({
   readAt: {
     type:Date,
     default: Date.now(),
-    required:true
   },
 });
 

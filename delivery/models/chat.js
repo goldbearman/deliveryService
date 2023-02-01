@@ -17,4 +17,8 @@ const ChatSchema = new Schema({
   },
 });
 
+ChatSchema.statics.getHistory = function (id){
+  return this.findOne({_id:id}).select('messages');
+}
+
 module.exports = model('Chat', ChatSchema);
