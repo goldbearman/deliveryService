@@ -43,7 +43,9 @@ io.on('connection', (socket) => {
         try {
             const {author} = socket.handshake.query;
             await Chat.sendMessage({author, receiver, text});
-            // socket.to(chart._id).emit('newMessage', chart.messages.pop());
+            const chat = await Chat.subscribe(author, chatId, message);
+            socket.join(chat._id.toString());
+            socket.to(chat._id.toString()).emit('newMessage', chat.messages.pop());
         } catch (e) {
             console.log(e);
         }
